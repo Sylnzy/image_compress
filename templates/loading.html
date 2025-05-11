@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Proses Kompresi Sedang Berjalan</h2>
+    <div class="loading-container">
+        <div class="file-info">
+            <p>Memproses: <strong>{{ original_name }}</strong></p>
+            <p>Metode: <strong>{{ method }}</strong></p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress">
+                <div id="progress-bar" class="progress-bar" style="width: 0%">0%</div>
+            </div>
+            <div class="progress-info">
+                <span id="progress-percent">0%</span>
+                <span id="time-left">Menghitung waktu...</span>
+            </div>
+        </div>
+
+        <div class="loading-message">
+            <p id="status-message">Memulai proses kompresi...</p>
+        </div>
+
+        <div id="error-container" class="error-message" style="display: none;">
+            <p id="error-message"></p>
+            <a href="{{ url_for('hello') }}" class="btn">Kembali ke Beranda</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const compressionId = "{{ compression_id }}";
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercent = document.getElementById('progress-percent');
+        const timeLeft = document.getElementById('time-left');
+        const statusMessage = document.getElementById('status-message');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
+
+        // Fungsi untuk polling status kompresi
+        function checkProgress() {
+            fetch(`/progress/${compressionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'not_found') {
+                        clearInterval(progressInterval);
+                        errorContainer.style.display = 'block';
+                        errorMessage.textContent = 'Proses kompresi tidak ditemukan.';
+                        return;
+                    }
+
+                    if (data.status === 'error') {
+                        clearInterval(progressInterval);
+                        errorContainer.style.display = 'block';
+                        errorMessage.textContent = data.error || 'Terjadi kesalahan saat proses kompresi.';
+                        return;
+                    }
+
+                    // Update progress bar
+                    const progress = Math.min(100, Math.round(data.progress));
+                    progressBar.style.width = `${progress}%`;
+                    progressBar.textContent = `${progress}%`;
+                    progressPercent.textContent = `${progress}%`;
+
+                    // Update status message
+                    if (data.status === 'starting') {
+                        statusMessage.textContent = 'Memulai proses kompresi...';
+                    } else if (data.status === 'processing') {
+                        statusMessage.textContent = 'Proses kompresi sedang berjalan...';
+                    }
+
+                    // Update time left
+                    timeLeft.textContent = data.time_left;
+
+                    // Check if complete
+                    if (data.status === 'complete') {
+                        clearInterval(progressInterval);
+                        statusMessage.textContent = 'Kompresi selesai!';
+
+                        // Redirect to result page after a short delay
+                        setTimeout(() => {
+                            window.location.href = `/result/${compressionId}`;
+                        }, 1000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking progress:', error);
+                });
+        }
+
+        // Atur interval polling (setiap 500ms)
+        const progressInterval = setInterval(checkProgress, 500);
+
+        // Check initial progress immediately
+        checkProgress();
+    });
+</script>
+
+<style>
+    .loading-container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+    }
+
+    .file-info {
+        margin-bottom: 20px;
+    }
+
+    .progress-container {
+        margin-bottom: 15px;
+    }
+
+    .progress {
+        height: 25px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-bottom: 10px;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background-color: #4CAF50;
+        color: white;
+        text-align: center;
+        line-height: 25px;
+        transition: width 0.5s;
+        min-width: 2em;
+    }
+
+    .progress-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9em;
+        color: #666;
+    }
+
+    .loading-message {
+        text-align: center;
+        margin: 15px 0;
+        font-style: italic;
+    }
+</style>
+{% endblock %}

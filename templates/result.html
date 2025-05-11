@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Hasil Kompresi Gambar</h2>
+
+    <div class="result-info">
+        <p><strong>Nama file asli:</strong> {{ original_name }}</p>
+        <p><strong>Metode kompresi:</strong> {{ compression_method }}</p>
+        <p><strong>Parameter kompresi:</strong> {{ compression_info }}</p>
+        <p><strong>Ukuran sebelum kompresi:</strong> {{ size_before }}</p>
+        <p><strong>Ukuran setelah kompresi:</strong> {{ size_after }}</p>
+        <p><strong>Rasio kompresi:</strong>
+            {% if compression_ratio.startswith("-") %}
+            <span class="negative-ratio">{{ compression_ratio }} (Ukuran meningkat)</span>
+            {% else %}
+            {{ compression_ratio }}
+            {% endif %}
+        </p>
+
+        {% if method_warning %}
+        <div class="warning-message">
+            <p><strong>⚠️ Perhatian:</strong> {{ method_warning }}</p>
+
+            {% if is_color_image and compression_method in ['AMBTC', 'BTC', 'SVD'] %}
+            <p>Metode kompresi {{ compression_method }} dirancang untuk gambar grayscale.
+                Gambar berwarna telah dikonversi ke grayscale untuk kompresi, sehingga informasi warna hilang.</p>
+
+            <p>Untuk gambar berwarna, sebaiknya gunakan metode:</p>
+            <ul>
+                <li><strong>PIL Standard</strong> - Metode umum untuk segala jenis gambar</li>
+                <li><strong>DCT</strong> - Untuk kualitas tinggi dengan gambar berwarna</li>
+            </ul>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="image-result">
+        <h3>Gambar Hasil Kompresi</h3>
+        <img src="{{ url_for('static', filename='images/' + compressed_image) }}" alt="Compressed Image"
+            style="max-width: 100%;">
+    </div>
+
+    <div class="actions">
+        <a href="{{ url_for('hello') }}" class="btn">Kembali ke Beranda</a>
+        <a href="{{ url_for('static', filename='images/' + compressed_image) }}" download class="btn">Download
+            Gambar</a>
+        <a href="{{ url_for('history') }}" class="btn">Lihat Riwayat Kompresi</a>
+    </div>
+</div>
+{% endblock %}

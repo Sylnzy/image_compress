@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Aplikasi Kompresi Gambar</h2>
+    <p>Selamat datang di aplikasi kompresi gambar sederhana</p>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash-message {% if category == 'error' %}flash-error{% else %}flash-info{% endif %}">
+            <p>{{ message }}</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div class="upload-section">
+        <h3>Upload Gambar</h3>
+        <form action="/compress" method="post" enctype="multipart/form-data" id="compressionForm">
+            <div class="form-group">
+                <label for="image">Pilih Gambar:</label>
+                <input type="file" id="image" name="image" accept="image/*" required>
+            </div>
+
+            <h4>Pilih Metode Kompresi:</h4>
+            <div class="compression-methods">
+                {% for method in compression_methods %}
+                <div class="method-card" data-color="{{ method.color }}">
+                    <input type="radio" id="method_{{ method.id }}" name="method" value="{{ method.id }}" {% if
+                        loop.first %}checked{% endif %} onchange="updateParameterForm()">
+                    <label for="method_{{ method.id }}" class="method-title">
+                        <span class="method-icon">{{ method.icon }}</span> {{ method.name }}
+                    </label>
+                    <div class="method-info">
+                        <p>{{ method.description }}</p>
+                        <div class="tags">
+                            <span class="tag tag-suitable">{{ method.suitable_for }}</span>
+                            <span class="tag tag-best">{{ method.best_for }}</span>
+                            <span class="tag tag-size">{{ method.file_limits }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div id="parameter-forms">
+                <!-- Parameter form untuk PIL dan DCT -->
+                <div class="parameter-form" id="form-PIL">
+                    <div class="form-group">
+                        <label for="quality">Kualitas Kompresi (1-100):</label>
+                        <input type="number" id="quality" name="quality" min="1" max="100" value="80"
+                            class="form-control">
+                        <small class="form-text">Nilai yang lebih tinggi = kualitas lebih baik, file lebih besar</small>
+                    </div>
+                </div>
+
+                <div class="parameter-form" id="form-DCT" style="display:none">
+                    <div class="form-group">
+                        <label for="quality-dct">Kualitas Kompresi (1-100):</label>
+                        <input type="number" id="quality-dct" name="quality" min="1" max="100" value="80"
+                            class="form-control">
+                        <small class="form-text">Kualitas DCT, mirip dengan standar JPEG</small>
+                    </div>
+                </div>
+
+                <div class="parameter-form" id="form-DWT" style="display:none">
+                    <div class="form-group">
+                        <label for="parameter-dwt">Level Dekomposisi:</label>
+                        <div class="parameter-options">
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="1"> Level 1
+                                <span class="parameter-desc">Detail rendah, kompresi tinggi</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="2" checked> Level 2
+                                <span class="parameter-desc">Seimbang</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="3"> Level 3
+                                <span class="parameter-desc">Detail tinggi, kompresi rendah</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parameter-form" id="form-BTC" style="display:none">
+                    <div class="form-group">
+                        <label for="parameter-btc">Ukuran Blok:</label>
+                        <div class="parameter-options">
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="2"> 2x2
+                                <span class="parameter-desc">Detail tinggi</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="4" checked> 4x4
+                                <span class="parameter-desc">Seimbang</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="8"> 8x8
+                                <span class="parameter-desc">Kompresi tinggi</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="parameter-form" id="form-AMBTC" style="display:none">
+                    <div class="form-group">
+                        <label for="parameter-ambtc">Ukuran Blok:</label>
+                        <div class="parameter-options">
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="2"> 2x2
+                                <span class="parameter-desc">Detail tinggi</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="4" checked> 4x4
+                                <span class="parameter-desc">Seimbang</span>
+                            </label>
+                            <label class="parameter-option">
+                                <input type="radio" name="parameter" value="8"> 8x8
+                                <span class="parameter-desc">Kompresi tinggi</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="method-warning">
+                        ⚠️ <strong>PERHATIAN:</strong> Metode ini hanya optimal untuk gambar grayscale.
+                        Gambar berwarna akan otomatis dikonversi ke grayscale.
+                    </div>
+                </div>
+
+                <div class="parameter-form" id="form-SVD" style="display:none">
+                    <div class="form-group">
+                        <label for="parameter-svd">Rank (opsional):</label>
+                        <input type="number" id="parameter-svd" name="parameter" min="1" max="100"
+                            placeholder="Auto (threshold energi 90%)" class="form-control">
+                        <small class="form-text">Biarkan kosong untuk menggunakan threshold energi 90% secara
+                            otomatis</small>
+                    </div>
+                    <div class="method-warning">
+                        ⚠️ <strong>PERHATIAN:</strong> Metode ini hanya optimal untuk gambar grayscale.
+                        Gambar berwarna akan otomatis dikonversi ke grayscale.
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">Kompres Gambar</button>
+        </form>
+    </div>
+
+    {% if error %}
+    <div class="error-message">
+        <p>Error: {{ error }}</p>
+    </div>
+    {% endif %}
+
+    {% if recent_compressions %}
+    <div class="recent-section">
+        <h3>Kompresi Terbaru</h3>
+        <table class="history-table recent-table">
+            <thead>
+                <tr>
+                    <th>Nama File</th>
+                    <th>Tanggal</th>
+                    <th>Metode</th>
+                    <th>Rasio Kompresi</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comp in recent_compressions %}
+                <tr>
+                    <td>{{ comp.original_filename }}</td>
+                    <td>{{ comp.compress_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>{{ comp.compression_method }}</td>
+                    <td>
+                        {% if comp.compression_ratio < 0 %} <span class="negative-ratio">{{
+                            "%.2f"|format(comp.compression_ratio) }}%</span>
+                            {% else %}
+                            {{ "%.2f"|format(comp.compression_ratio) }}%
+                            {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('static', filename='images/' + comp.compressed_filename) }}"
+                            class="btn btn-small" target="_blank">Lihat</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <a href="{{ url_for('history') }}" class="link">Lihat semua riwayat kompresi</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function updateParameterForm() {
+        // Sembunyikan semua form parameter
+        const parameterForms = document.querySelectorAll('.parameter-form');
+        parameterForms.forEach(form => {
+            form.style.display = 'none';
+        });
+
+        // Dapatkan metode yang dipilih
+        const selectedMethod = document.querySelector('input[name="method"]:checked').value;
+
+        // Tampilkan form parameter yang sesuai
+        const formToShow = document.getElementById('form-' + selectedMethod);
+        if (formToShow) {
+            formToShow.style.display = 'block';
+        }
+    }
+
+    // Initialize form when page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        updateParameterForm();
+
+        // Apply border colors from data attributes
+        document.querySelectorAll('.method-card').forEach(card => {
+            const color = card.getAttribute('data-color');
+            if (color) {
+                card.style.borderColor = color;
+            }
+        });
+    });
+</script>
+{% endblock %}

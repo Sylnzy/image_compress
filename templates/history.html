@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Riwayat Kompresi Gambar</h2>
+
+    {% if compressions %}
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>No</th>
+                <th>Nama File Asli</th>
+                <th>Tanggal Kompresi</th>
+                <th>Metode</th>
+                <th>Parameter</th>
+                <th>Ukuran Sebelum</th>
+                <th>Ukuran Setelah</th>
+                <th>Rasio Kompresi</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for compression in compressions %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ compression.original_filename }}</td>
+                <td>{{ compression.compress_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>{{ compression.compression_method }}</td>
+                <td>{{ compression.parameter_value }}</td>
+                <td>{{ "%.2f"|format(compression.file_size_before) }} KB</td>
+                <td>{{ "%.2f"|format(compression.file_size_after) }} KB</td>
+                <td>{{ "%.2f"|format(compression.compression_ratio) }}%</td>
+                <td>
+                    <a href="{{ url_for('static', filename='images/' + compression.compressed_filename) }}"
+                        class="btn btn-small" target="_blank">Lihat</a>
+                    <a href="{{ url_for('static', filename='images/' + compression.compressed_filename) }}"
+                        class="btn btn-small" download>Download</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Belum ada riwayat kompresi gambar.</p>
+    {% endif %}
+
+    <div class="actions">
+        <a href="{{ url_for('hello') }}" class="btn">Kembali ke Beranda</a>
+    </div>
+</div>
+{% endblock %}
